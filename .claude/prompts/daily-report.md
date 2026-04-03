@@ -307,8 +307,7 @@ node .claude/skills/slack-formatting/scripts/post-report.js \
 **このスクリプトが行うこと:**
 - ✅ 複数画像を1メッセージにまとめて投稿
 - ✅ チャンネルに直接投稿（スレッドではない）
-- ✅ 環境変数 `SLACK_CHANNEL` からチャンネルIDを取得
-- ✅ 未設定の場合はデバッグチャンネル `YOUR_DEBUG_CHANNEL_ID` に投稿
+- ✅ 環境変数 `SLACK_CHANNEL` からチャンネルIDを取得（必須）
 
 ## 注意事項
 

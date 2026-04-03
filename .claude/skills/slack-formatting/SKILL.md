@@ -44,9 +44,7 @@ node .claude/skills/slack-formatting/scripts/post-report.js \
 | 環境変数 | 用途 | 必須 |
 |----------|------|------|
 | `SLACK_BOT_TOKEN` | Bot User OAuth Token | ✅ |
-| `SLACK_CHANNEL` | 投稿先チャンネルID | ※未設定時はデバッグチャンネル |
-
-**デバッグ用チャンネル**: `YOUR_DEBUG_CHANNEL_ID`
+| `SLACK_CHANNEL` | 投稿先チャンネルID | 必須 |
 
 ### スクリプトが行うこと
 

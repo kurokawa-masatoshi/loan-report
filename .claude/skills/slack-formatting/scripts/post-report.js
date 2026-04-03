@@ -24,7 +24,6 @@ const https = require('https');
 // 環境変数（SLACK_CHANNEL または SLACK_CHANNEL_ID をサポート）
 const SLACK_TOKEN = process.env.SLACK_BOT_TOKEN;
 const CHANNEL_ID = process.env.SLACK_CHANNEL || process.env.SLACK_CHANNEL_ID;
-const DEBUG_CHANNEL = 'YOUR_DEBUG_CHANNEL_ID';
 
 // ========================================
 // ログ出力（原因特定用）
@@ -146,7 +145,7 @@ async function completeUpload(fileIds, message, channelId) {
 // メイン処理
 // ========================================
 async function postReport(imagePaths, message) {
-  const channelId = CHANNEL_ID || DEBUG_CHANNEL;
+  const channelId = CHANNEL_ID;
 
   logSection('SLACK投稿開始');
   log(`投稿先チャンネル: ${channelId}`);
@@ -215,7 +214,8 @@ async function main() {
   }
 
   if (!CHANNEL_ID) {
-    log(`警告: SLACK_CHANNEL が未設定のため、デバッグチャンネル (${DEBUG_CHANNEL}) に投稿します`);
+    console.error('エラー: SLACK_CHANNEL（または SLACK_CHANNEL_ID）環境変数が必要です');
+    process.exit(1);
   }
 
   // 引数パース

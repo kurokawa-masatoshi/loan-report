@@ -11,11 +11,6 @@ on:
         description: '設定ファイルパス'
         required: true
         type: string
-      debug_channel:
-        description: 'デバッグ用チャンネルID（指定時はこちらに投稿）'
-        required: false
-        type: string
-        default: ''
       target_date:
         description: '対象日（YYYY-MM-DD形式、省略時は前日）'
         required: false
@@ -82,7 +77,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL: ${{ inputs.debug_channel != '' && inputs.debug_channel || secrets.SLACK_CHANNEL }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
           TARGET_DATE: ${{ inputs.target_date }}
 
       - name: Notify failure to Slack
@@ -112,9 +107,9 @@ jobs:
             -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H "Content-Type: application/json" \
             -d '{
-              "channel": "'"${SLACK_CHANNEL:-YOUR_DEBUG_CHANNEL_ID}"'",
+              "channel": "'"${SLACK_CHANNEL}"'",
               "text": ":x: *コミネコ エラー発生*\n\nプロジェクト: ${{ inputs.project_name }}\n失敗箇所: '"$FAILED_STEP"'\nワークフロー実行: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|詳細を確認>"
             }'
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL: ${{ inputs.debug_channel != '' && inputs.debug_channel || secrets.SLACK_CHANNEL }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}

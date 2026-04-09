@@ -1,0 +1,51 @@
+# GitHub Pages に progress-report/ をそのまま公開します。
+# 利用手順:
+# 1. このリポジトリを GitHub に push（またはミラー）する
+# 2. Settings → Pages → Build and deployment → Source で「GitHub Actions」を選択
+# 3. 初回 push 後、数分で公開 URL が環境に表示されます
+#
+# 公開 URL の例（リポジトリ名が commit-report-tool の場合）:
+#   https://<ユーザーまたは組織>.github.io/commit-report-tool/
+#   https://<ユーザーまたは組織>.github.io/commit-report-tool/loan-progress-report.html
+
+name: Deploy loan report (GitHub Pages)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'progress-report/**'
+      - '.github/workflows/deploy-loan-report-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-loan-progress-report
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: progress-report
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

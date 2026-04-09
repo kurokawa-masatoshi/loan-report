@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>住宅ローン実行進捗レポート</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans JP"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    @keyframes loan-row-flash {
+      0%, 100% { box-shadow: inset 0 0 0 2px rgb(251 191 36); background-color: rgb(255 251 235); }
+      50% { box-shadow: inset 0 0 0 3px rgb(245 158 11); background-color: rgb(254 243 199); }
+    }
+    tr.loan-row-highlight {
+      animation: loan-row-flash 0.6s ease-in-out 3;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 font-sans text-slate-800 antialiased">
+  <div class="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
+    <header class="mb-8 border-b border-slate-200 pb-6">
+      <p class="text-sm font-medium text-slate-500">融資関係・進捗管理（プレビュー）</p>
+      <h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+        住宅ローン 実行（予定）進捗一覧
+      </h1>
+      <p class="mt-2 max-w-3xl text-sm text-slate-600">
+        実行日順の一覧と、月ごとのカレンダーで受付後の進捗を確認します。括弧内【　】はソースデータの入力値を表示する想定です。カレンダーの名前をクリックすると一覧の該当行へ移動します。
+      </p>
+    </header>
+
+    <!-- 凡例 -->
+    <section class="mb-6 space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm" aria-labelledby="legend-heading">
+      <div class="flex flex-wrap items-center gap-4">
+        <h2 id="legend-heading" class="text-xs font-semibold text-slate-500">状態表示</h2>
+        <span class="inline-flex items-center gap-1.5 text-xs">
+          <span class="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">完了・有・依頼済</span>
+        </span>
+        <span class="inline-flex items-center gap-1.5 text-xs">
+          <span class="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-900">未完了・無・未済</span>
+        </span>
+        <span class="inline-flex items-center gap-1.5 text-xs">
+          <span class="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">未定</span>
+        </span>
+      </div>
+      <p class="text-xs leading-relaxed text-slate-600">
+        <span class="font-medium text-slate-700">書類列の意味：</span>
+        金消契約書類＝完了／未完了、表題登記・印鑑証明・住民票・振込依頼書＝有／無、抵当権書類持出し＝依頼済／依頼未済。
+        <code class="rounded bg-slate-100 px-1 font-mono text-[11px]">execDate</code> は実行予定日（未定でも入力）です。続けて
+        <code class="rounded bg-slate-100 px-1 font-mono text-[11px]">execLabel</code>（例：未定・決定）を表示します。
+      </p>
+    </section>
+
+    <!-- 実行日順テーブル -->
+    <section class="mb-12" aria-labelledby="table-section-heading">
+      <h2 id="table-section-heading" class="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-900">
+        <span class="h-8 w-1 rounded-full bg-indigo-600" aria-hidden="true"></span>
+        実行（予定）日順
+      </h2>
+      <p class="mb-2 text-xs text-slate-500">
+        表は横にスクロールできます（右端に他の列があります）。
+      </p>
+      <div class="relative">
+        <div
+          id="progress-table-scroll"
+          class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm scroll-smooth"
+          tabindex="0"
+          role="region"
+          aria-label="進捗一覧表（横スクロール可）"
+        >
+          <table class="w-full min-w-[1280px] border-collapse text-left text-sm">
+            <caption class="sr-only">
+              住宅ローンの実行予定日順の進捗。第1列は予定日と確定状態、要対応の書類サマリ、職員番号、顧客番号、氏名、資金使途、司法書士、各書類の状態です。
+            </caption>
+            <thead>
+              <tr class="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
+                <th scope="col" class="sticky left-0 z-10 whitespace-nowrap bg-slate-50 px-3 py-3 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">予定日・状態</th>
+                <th scope="col" class="min-w-[140px] px-3 py-3">要対応（書類）</th>
+                <th scope="col" class="whitespace-nowrap px-3 py-3">職員番号</th>
+                <th scope="col" class="whitespace-nowrap px-3 py-3">顧客番号</th>
+                <th scope="col" class="min-w-[100px] px-3 py-3">氏名</th>
+                <th scope="col" class="min-w-[200px] px-3 py-3">資金使途</th>
+                <th scope="col" class="min-w-[100px] px-3 py-3">司法書士</th>
+                <th scope="col" class="whitespace-nowrap px-3 py-3">金消契約書類</th>
+                <th scope="col" class="whitespace-nowrap px-3 py-3">表題登記</th>
+                <th scope="col" class="whitespace-nowrap px-3 py-3">印鑑証明</th>
+                <th scope="col" class="whitespace-nowrap px-3 py-3">住民票</th>
+                <th scope="col" class="whitespace-nowrap px-3 py-3">振込依頼書</th>
+                <th scope="col" class="whitespace-nowrap px-3 py-3">抵当権書類持出し</th>
+              </tr>
+            </thead>
+            <tbody id="progress-table-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <div
+          class="pointer-events-none absolute inset-y-0 right-0 z-[1] w-8 bg-gradient-to-l from-white to-transparent"
+          aria-hidden="true"
+        ></div>
+      </div>
+    </section>
+
+    <!-- 月ごとカレンダー（月曜始まり） -->
+    <section aria-labelledby="calendar-section-heading">
+      <h2 id="calendar-section-heading" class="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-900">
+        <span class="h-8 w-1 rounded-full bg-indigo-600" aria-hidden="true"></span>
+        月ごとのカレンダー（月曜始まり）
+      </h2>
+      <div id="calendars" class="grid gap-8 lg:grid-cols-2"></div>
+      <p class="mt-4 text-xs text-slate-500">
+        ※予定日は確定前（<code class="font-mono text-[11px]">execLabel</code> が「未定」）でも入力します。カレンダーでは（未定）付きのチップで示します。
+      </p>
+    </section>
+
+    <footer class="mt-12 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
+      表示データは見た目確認用のサンプルです。本番ではソースシステムと連携して生成します。
+    </footer>
+  </div>
+
+  <script>
+    /**
+     * 表示オプション（スクリーンショットや E2E では referenceDate を固定してください）
+     */
+    const VIEW_OPTIONS = {
+      /** カレンダー上の「今日」リングに使う日付（YYYY-MM-DD、ローカル日付として解釈） */
+      referenceDate: '2026-04-09',
+    };
+
+    /** サンプル：本番では API 等から取得して renderPage(rows, VIEW_OPTIONS) に渡す */
+    const SAMPLE_ROWS = [
+      {
+        execDate: '2026-04-12',
+        execLabel: '未定',
+        staffId: 'S-1042',
+        customerId: 'C-889120',
+        name: '山田 太郎',
+        fundUse: { type: '一戸建て', detail: '中古' },
+        refinanceBank: null,
+        judicialScrivener: '〇〇司法書士事務所',
+        loanDocsDone: true,
+        titleRegDone: false,
+        sealCertReceived: true,
+        juminhyoReceived: false,
+        transferRequestReceived: false,
+        mortgageDocsRequested: false,
+      },
+      {
+        execDate: '2026-04-10',
+        execLabel: '決定',
+        staffId: 'S-1042',
+        customerId: 'C-772301',
+        name: '佐藤 花子',
+        fundUse: { type: 'マンションの購入', detail: '新築' },
+        refinanceBank: null,
+        judicialScrivener: '△△法務事務所',
+        loanDocsDone: true,
+        titleRegDone: true,
+        sealCertReceived: true,
+        juminhyoReceived: true,
+        transferRequestReceived: true,
+        mortgageDocsRequested: true,
+      },
+      {
+        execDate: '2026-04-15',
+        execLabel: '決定',
+        staffId: 'S-2103',
+        customerId: 'C-551002',
+        name: '鈴木 一郎',
+        fundUse: { type: '借換え', detail: null },
+        refinanceBank: '〇〇信用金庫',
+        judicialScrivener: '□□登記事務所',
+        loanDocsDone: false,
+        titleRegDone: false,
+        sealCertReceived: true,
+        juminhyoReceived: true,
+        transferRequestReceived: false,
+        mortgageDocsRequested: false,
+      },
+      {
+        execDate: '2026-04-22',
+        execLabel: '決定',
+        staffId: 'S-0881',
+        customerId: 'C-330198',
+        name: '高橋 美咲',
+        fundUse: { type: '宅地の購入', detail: null },
+        refinanceBank: null,
+        judicialScrivener: '◇◇パートナーズ',
+        loanDocsDone: true,
+        titleRegDone: true,
+        sealCertReceived: false,
+        juminhyoReceived: true,
+        transferRequestReceived: true,
+        mortgageDocsRequested: true,
+      },
+      {
+        execDate: '2026-05-08',
+        execLabel: '決定',
+        staffId: 'S-1042',
+        customerId: 'C-990045',
+        name: '伊藤 健',
+        fundUse: { type: 'リフォーム', detail: null },
+        refinanceBank: null,
+        judicialScrivener: '××リーガル',
+        loanDocsDone: false,
+        titleRegDone: false,
+        sealCertReceived: true,
+        juminhyoReceived: false,
+        transferRequestReceived: false,
+        mortgageDocsRequested: false,
+      },
+    ];
+
+    const FUND_USE_OPTIONS = [
+      '一戸建て（新築・中古）',
+      'マンションの購入（新築・中古）',
+      '宅地の購入',
+      '借換え　【金融機関名：　　　　　】',
+      'リフォーム',
+    ];
+
+    const DOC_FIELDS = [
+      { key: 'loanDocsDone', short: '金消' },
+      { key: 'titleRegDone', short: '表題' },
+      { key: 'sealCertReceived', short: '印鑑' },
+      { key: 'juminhyoReceived', short: '住民票' },
+      { key: 'transferRequestReceived', short: '振込依頼' },
+      { key: 'mortgageDocsRequested', short: '抵当権' },
+    ];
+
+    const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+    function parseISODateOnly(iso) {
+      const m = ISO_DATE_RE.exec(iso || '');
+      if (!m) return null;
+      const y = Number(m[1]);
+      const mo = Number(m[2]) - 1;
+      const d = Number(m[3]);
+      const dt = new Date(y, mo, d);
+      if (dt.getFullYear() !== y || dt.getMonth() !== mo || dt.getDate() !== d) return null;
+      return dt;
+    }
+
+    function formatISODateForDisplay(iso) {
+      const dt = parseISODateOnly(iso);
+      if (!dt) return null;
+      return new Intl.DateTimeFormat('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(dt);
+    }
+
+    function getPendingShortLabels(row) {
+      return DOC_FIELDS.filter((f) => !row[f.key]).map((f) => f.short);
+    }
+
+    /** execLabel が「まだ確定していない」扱い（カレンダー・表のスタイルに使用） */
+    function isExecStatusUndecided(row) {
+      const label = (row.execLabel || '').trim();
+      return label === '' || label === '未定';
+    }
+
+    function createBadge(ok, yesLabel, noLabel) {
+      const span = document.createElement('span');
+      span.className = `inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+        ok ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
+      }`;
+      span.textContent = ok ? yesLabel : noLabel;
+      return span;
+    }
+
+    function formatFundUseOneLine(row) {
+      const t = row.fundUse?.type;
+      if (t === '一戸建て') {
+        const d = row.fundUse?.detail === '新築' ? '新築' : '中古';
+        return `一戸建て（${d}）`;
+      }
+      if (t === 'マンションの購入') {
+        return `マンションの購入（${row.fundUse?.detail || '—'}）`;
+      }
+      if (t === '宅地の購入') return '宅地の購入';
+      if (t === '借換え') {
+        return `借換え（金融機関：${row.refinanceBank || '（未入力）'}）`;
+      }
+      if (t === 'リフォーム') return 'リフォーム';
+      return t || '—';
+    }
+
+    function buildFundUseChecklist(row) {
+      const wrap = document.createElement('div');
+      wrap.className = 'space-y-0.5 text-xs leading-snug text-slate-600';
+
+      const fu = row.fundUse || {};
+      FUND_USE_OPTIONS.forEach((label) => {
+        let active = false;
+        let display = label;
+        if (label.startsWith('一戸建て') && fu.type === '一戸建て') {
+          active = true;
+          display = `一戸建て（${row.fundUse.detail === '新築' ? '新築' : '中古'}）`;
+        } else if (label.startsWith('マンション') && fu.type === 'マンションの購入') {
+          active = true;
+          display = `マンションの購入（${fu.detail || '—'}）`;
+        } else if (label.startsWith('宅地') && fu.type === '宅地の購入') {
+          active = true;
+        } else if (label.startsWith('借換え') && fu.type === '借換え') {
+          active = true;
+          display = `借換え　【金融機関名：${row.refinanceBank || '　　　　　'}】`;
+        } else if (label.startsWith('リフォーム') && fu.type === 'リフォーム') {
+          active = true;
+        }
+
+        const line = document.createElement('div');
+        line.className = active ? 'font-semibold text-slate-900' : 'text-slate-500';
+        line.textContent = `${active ? '●' : '○'} ${display}`;
+        wrap.appendChild(line);
+      });
+
+      return wrap;
+    }
+
+    function buildFundUseCell(row) {
+      const td = document.createElement('td');
+      td.className = 'px-3 py-3 align-top';
+
+      const details = document.createElement('details');
+      details.className = 'group';
+
+      const summary = document.createElement('summary');
+      summary.className =
+        'cursor-pointer list-none text-xs font-medium text-slate-900 marker:content-none [&::-webkit-details-marker]:hidden';
+      const sumInner = document.createElement('span');
+      sumInner.className = 'inline-flex flex-wrap items-center gap-1';
+      sumInner.append(document.createTextNode(formatFundUseOneLine(row)));
+      const hint = document.createElement('span');
+      hint.className = 'text-[10px] font-normal text-indigo-600 group-open:hidden';
+      hint.textContent = '（帳票形式を開く）';
+      sumInner.appendChild(hint);
+      summary.appendChild(sumInner);
+
+      const body = document.createElement('div');
+      body.className = 'mt-2 border-l-2 border-slate-200 pl-2';
+      body.appendChild(buildFundUseChecklist(row));
+
+      details.append(summary, body);
+      td.appendChild(details);
+      return td;
+    }
+
+    function buildExecDateCell(row) {
+      const td = document.createElement('td');
+      td.className =
+        'sticky left-0 z-[5] border-r border-slate-100 bg-white px-3 py-3 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]';
+
+      if (!row.execDate) {
+        const wrap = document.createElement('div');
+        wrap.className = 'flex flex-wrap items-center gap-2';
+        const warn = document.createElement('span');
+        warn.className = 'rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900';
+        warn.textContent = '予定日未入力';
+        wrap.appendChild(warn);
+        if (row.execLabel && row.execLabel.trim() !== '') {
+          const s = document.createElement('span');
+          s.className = 'rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700';
+          s.textContent = row.execLabel;
+          wrap.appendChild(s);
+        }
+        td.appendChild(wrap);
+        return td;
+      }
+
+      const formatted = formatISODateForDisplay(row.execDate);
+      const wrap = document.createElement('div');
+      wrap.className = 'flex flex-wrap items-baseline gap-x-2 gap-y-1';
+
+      const dateEl = document.createElement('span');
+      dateEl.className = 'font-mono text-sm font-semibold text-slate-900';
+      dateEl.textContent = formatted || row.execDate;
+
+      const labelEl = document.createElement('span');
+      const undecided = isExecStatusUndecided(row);
+      const labelText = (row.execLabel && row.execLabel.trim()) || '未定';
+      if (undecided) {
+        labelEl.className = 'rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700';
+      } else {
+        labelEl.className = 'rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800';
+      }
+      labelEl.textContent = labelText;
+
+      wrap.append(dateEl, labelEl);
+      td.appendChild(wrap);
+      return td;
+    }
+
+    function buildPendingCell(row) {
+      const td = document.createElement('td');
+      td.className = 'max-w-[180px] px-3 py-3 align-top text-xs';
+
+      const pending = getPendingShortLabels(row);
+      if (pending.length === 0) {
+        const span = document.createElement('span');
+        span.className = 'font-medium text-emerald-800';
+        span.textContent = '書類差分なし';
+        td.appendChild(span);
+        return td;
+      }
+
+      const span = document.createElement('span');
+      span.className = 'font-medium text-amber-900';
+      span.textContent = `要対応: ${pending.join('・')}`;
+      td.appendChild(span);
+      return td;
+    }
+
+    function sortByExecDate(rows) {
+      return [...rows].sort((a, b) => {
+        if (!a.execDate && !b.execDate) return 0;
+        if (!a.execDate) return 1;
+        if (!b.execDate) return -1;
+        return a.execDate.localeCompare(b.execDate);
+      });
+    }
+
+    function renderTable(rows) {
+      const tbody = document.getElementById('progress-table-body');
+      tbody.replaceChildren();
+      const sorted = sortByExecDate(rows);
+
+      sorted.forEach((row) => {
+        const tr = document.createElement('tr');
+        tr.className = 'transition-colors hover:bg-slate-50/80';
+        tr.dataset.customerId = row.customerId;
+
+        tr.append(
+          buildExecDateCell(row),
+          buildPendingCell(row),
+          (() => {
+            const td = document.createElement('td');
+            td.className = 'whitespace-nowrap px-3 py-3 font-mono text-xs';
+            td.textContent = row.staffId;
+            return td;
+          })(),
+          (() => {
+            const td = document.createElement('td');
+            td.className = 'whitespace-nowrap px-3 py-3 font-mono text-xs';
+            td.textContent = row.customerId;
+            return td;
+          })(),
+          (() => {
+            const td = document.createElement('td');
+            td.className = 'px-3 py-3 font-medium';
+            td.textContent = row.name;
+            return td;
+          })(),
+          buildFundUseCell(row),
+          (() => {
+            const td = document.createElement('td');
+            td.className = 'px-3 py-3 text-xs';
+            td.textContent = `【${row.judicialScrivener}】`;
+            return td;
+          })(),
+        );
+
+        const cells = [
+          createBadge(row.loanDocsDone, '完了', '未完了'),
+          createBadge(row.titleRegDone, '有', '無'),
+          createBadge(row.sealCertReceived, '有', '無'),
+          createBadge(row.juminhyoReceived, '有', '無'),
+          createBadge(row.transferRequestReceived, '有', '無'),
+          createBadge(row.mortgageDocsRequested, '依頼済', '依頼未済'),
+        ];
+        cells.forEach((el) => {
+          const td = document.createElement('td');
+          td.className = 'px-3 py-3';
+          td.appendChild(el);
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function getCalendarStartMonth(rows, fallbackIso) {
+      const dates = rows.map((r) => r.execDate).filter(Boolean).sort();
+      if (dates.length === 0) {
+        const d = parseISODateOnly(fallbackIso);
+        if (d) return { year: d.getFullYear(), monthIndex: d.getMonth() };
+        const now = new Date();
+        return { year: now.getFullYear(), monthIndex: now.getMonth() };
+      }
+      const first = parseISODateOnly(dates[0]);
+      if (first) return { year: first.getFullYear(), monthIndex: first.getMonth() };
+      const now = new Date();
+      return { year: now.getFullYear(), monthIndex: now.getMonth() };
+    }
+
+    function eventsOnDate(rows, isoDate) {
+      return rows.filter((r) => r.execDate === isoDate);
+    }
+
+    function isoDateFromDate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    /** 月曜始まり：カレンダーグリッド用の日付配列 */
+    function getCalendarGrid(year, monthIndex) {
+      const first = new Date(year, monthIndex, 1);
+      const last = new Date(year, monthIndex + 1, 0);
+      const startPad = first.getDay() === 0 ? 6 : first.getDay() - 1;
+      const daysInMonth = last.getDate();
+      const cells = [];
+
+      const prevLast = new Date(year, monthIndex, 0).getDate();
+      for (let i = startPad - 1; i >= 0; i--) {
+        const day = prevLast - i;
+        cells.push({ date: new Date(year, monthIndex - 1, day), inMonth: false });
+      }
+      for (let d = 1; d <= daysInMonth; d++) {
+        cells.push({ date: new Date(year, monthIndex, d), inMonth: true });
+      }
+      const remainder = cells.length % 7;
+      const trail = remainder === 0 ? 0 : 7 - remainder;
+      for (let i = 1; i <= trail; i++) {
+        cells.push({ date: new Date(year, monthIndex + 1, i), inMonth: false });
+      }
+      return cells;
+    }
+
+    function scrollToCustomerRow(customerId) {
+      const scrollEl = document.getElementById('progress-table-scroll');
+      const tr = document.querySelector(`tr[data-customer-id="${CSS.escape(customerId)}"]`);
+      if (!tr || !scrollEl) return;
+      scrollEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      tr.classList.remove('loan-row-highlight');
+      void tr.offsetWidth;
+      tr.classList.add('loan-row-highlight');
+      window.setTimeout(() => tr.classList.remove('loan-row-highlight'), 2000);
+    }
+
+    function renderMonthCalendarEl(year, monthIndex, rows, referenceMidnight) {
+      const labels = ['月', '火', '水', '木', '金', '土', '日'];
+      const title = `${year}年${monthIndex + 1}月`;
+      const grid = getCalendarGrid(year, monthIndex);
+
+      const root = document.createElement('div');
+      root.className = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm';
+
+      const h3 = document.createElement('h3');
+      h3.className = 'mb-3 text-center text-base font-bold text-slate-900';
+      h3.textContent = title;
+      root.appendChild(h3);
+
+      const gridEl = document.createElement('div');
+      gridEl.className = 'grid grid-cols-7 gap-px overflow-hidden rounded-lg bg-slate-200 text-center text-xs';
+
+      labels.forEach((lb) => {
+        const h = document.createElement('div');
+        h.className = 'bg-slate-100 py-2 font-semibold text-slate-600';
+        h.textContent = lb;
+        gridEl.appendChild(h);
+      });
+
+      grid.forEach(({ date, inMonth }) => {
+        const key = isoDateFromDate(date);
+        const evs = eventsOnDate(rows, key);
+        const isToday = referenceMidnight && date.getTime() === referenceMidnight.getTime();
+        const muted = !inMonth ? 'opacity-40' : '';
+        const todayRing = isToday && inMonth ? 'ring-2 ring-indigo-500 ring-inset z-[1]' : '';
+        const bg = inMonth ? 'bg-white' : 'bg-slate-50';
+
+        const cell = document.createElement('div');
+        cell.className = `min-h-[4.5rem] p-1 text-left ${bg} ${muted} ${todayRing}`;
+
+        const dayNum = document.createElement('span');
+        dayNum.className = `text-sm font-semibold ${inMonth ? 'text-slate-900' : 'text-slate-500'}`;
+        dayNum.textContent = String(date.getDate());
+        cell.appendChild(dayNum);
+
+        if (evs.length && inMonth) {
+          const list = document.createElement('div');
+          list.className = 'mt-1 space-y-0.5';
+          evs.forEach((e) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            const undecided = isExecStatusUndecided(e);
+            const chipText = undecided ? `${e.name}（未定）` : e.name;
+            if (undecided) {
+              btn.className =
+                'w-full max-w-full truncate rounded border border-dashed border-slate-300 bg-slate-100 px-0.5 py-0.5 text-left text-[10px] font-medium text-slate-800 hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400';
+            } else {
+              btn.className =
+                'w-full max-w-full truncate rounded bg-indigo-50 px-0.5 py-0.5 text-left text-[10px] font-medium text-indigo-900 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-400';
+            }
+            btn.textContent = chipText;
+            btn.setAttribute(
+              'aria-label',
+              `一覧の行へ移動: ${e.name}（顧客 ${e.customerId}）${undecided ? '、実行日は未定' : ''}`,
+            );
+            btn.addEventListener('click', () => scrollToCustomerRow(e.customerId));
+            list.appendChild(btn);
+          });
+          cell.appendChild(list);
+        }
+
+        gridEl.appendChild(cell);
+      });
+
+      root.appendChild(gridEl);
+      return root;
+    }
+
+    function renderCalendars(rows, viewOptions) {
+      const el = document.getElementById('calendars');
+      el.replaceChildren();
+
+      const ref = parseISODateOnly(viewOptions.referenceDate);
+      const { year, monthIndex } = getCalendarStartMonth(rows, viewOptions.referenceDate);
+
+      let y = year;
+      let m = monthIndex;
+      const second = new Date(y, m + 1, 1);
+      const y2 = second.getFullYear();
+      const m2 = second.getMonth();
+
+      const refMidnight = ref;
+      if (refMidnight) refMidnight.setHours(0, 0, 0, 0);
+
+      el.append(
+        renderMonthCalendarEl(y, m, rows, refMidnight),
+        renderMonthCalendarEl(y2, m2, rows, refMidnight),
+      );
+    }
+
+    function renderPage(rows, viewOptions) {
+      renderTable(rows);
+      renderCalendars(rows, viewOptions);
+    }
+
+    renderPage(SAMPLE_ROWS, VIEW_OPTIONS);
+  </script>
+</body>
+</html>

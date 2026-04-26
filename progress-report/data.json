@@ -1,0 +1,18 @@
+[
+  {
+    "execDate": "2025-05-15",
+    "execLabel": "確定",
+    "staffId": 101,
+    "customerId": "C0001",
+    "name": "山田太郎",
+    "fundUse": "一戸建て新築",
+    "refinanceBank": "（空欄）",
+    "judicialScrivener": "田中法務事務所",
+    "loanDocsDone": true,
+    "titleRegDone": false,
+    "sealCertReceived": true,
+    "juminhyoReceived": false,
+    "transferRequestReceived": true,
+    "mortgageDocsRequested": false
+  }
+]

@@ -650,9 +650,10 @@
       renderCalendars(rows, viewOptions);
     }
 
-    fetch('https://raw.githubusercontent.com/kurokawa-masatoshi/loan-report/main/%E9%80%B2%E6%8A%97%E5%A0%B1%E5%91%8A/data.json').then(r=>r.json()).then(data=>renderPage(data, VIEW_OPTIONS)).catch(()=>renderPage(SAMPLE_ROWS, VIEW_OPTIONS));
+    fetch('./data.json').then(r=>r.json()).then(data=>renderPage(data, VIEW_OPTIONS)).catch(()=>renderPage(SAMPLE_ROWS, VIEW_OPTIONS));
   </script>
 </body>
 </html>
+
 
 

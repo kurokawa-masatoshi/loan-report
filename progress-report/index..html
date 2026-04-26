@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
@@ -650,7 +650,10 @@
       renderCalendars(rows, viewOptions);
     }
 
-    renderPage(SAMPLE_ROWS, VIEW_OPTIONS);
+    fetch('./data.json').then(r=>r.json()).then(data=>renderPage(data, VIEW_OPTIONS)).catch(()=>renderPage(SAMPLE_ROWS, VIEW_OPTIONS));
   </script>
 </body>
 </html>
+
+
+

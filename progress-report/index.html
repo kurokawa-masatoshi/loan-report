@@ -650,7 +650,8 @@
       renderCalendars(rows, viewOptions);
     }
 
-    fetch('../進捗報告/data.json').then(r=>r.json()).then(data=>renderPage(data, VIEW_OPTIONS)).catch(()=>renderPage(SAMPLE_ROWS, VIEW_OPTIONS));
+    fetch('./進捗報告/data.json').then(r=>r.json()).then(data=>renderPage(data, VIEW_OPTIONS)).catch(()=>renderPage(SAMPLE_ROWS, VIEW_OPTIONS));
   </script>
 </body>
 </html>
+

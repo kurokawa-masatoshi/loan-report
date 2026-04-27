@@ -14,5 +14,21 @@
     "juminhyoReceived": false,
     "transferRequestReceived": true,
     "mortgageDocsRequested": false
+  },
+  {
+    "execDate": "2025-05-22",
+    "execLabel": "確定",
+    "staffId": "",
+    "customerId": "",
+    "name": "",
+    "fundUse": "",
+    "refinanceBank": "",
+    "judicialScrivener": "",
+    "loanDocsDone": false,
+    "titleRegDone": false,
+    "sealCertReceived": false,
+    "juminhyoReceived": false,
+    "transferRequestReceived": false,
+    "mortgageDocsRequested": false
   }
 ]

@@ -1,5 +1,21 @@
 [
   {
+    "execDate": "2025-04-30",
+    "execLabel": "確定",
+    "staffId": 110,
+    "customerId": "運転",
+    "name": "山田",
+    "fundUse": "土地",
+    "refinanceBank": "",
+    "judicialScrivener": "荒木",
+    "loanDocsDone": false,
+    "titleRegDone": false,
+    "sealCertReceived": false,
+    "juminhyoReceived": false,
+    "transferRequestReceived": false,
+    "mortgageDocsRequested": false
+  },
+  {
     "execDate": "2025-05-15",
     "execLabel": "確定",
     "staffId": 101,
@@ -8,27 +24,11 @@
     "fundUse": "一戸建て新築",
     "refinanceBank": "（空欄）",
     "judicialScrivener": "田中法務事務所",
-    "loanDocsDone": true,
+    "loanDocsDone": false,
     "titleRegDone": false,
     "sealCertReceived": true,
     "juminhyoReceived": false,
     "transferRequestReceived": true,
-    "mortgageDocsRequested": false
-  },
-  {
-    "execDate": "2025-05-22",
-    "execLabel": "確定",
-    "staffId": "",
-    "customerId": "",
-    "name": "",
-    "fundUse": "",
-    "refinanceBank": "",
-    "judicialScrivener": "",
-    "loanDocsDone": false,
-    "titleRegDone": false,
-    "sealCertReceived": false,
-    "juminhyoReceived": false,
-    "transferRequestReceived": false,
     "mortgageDocsRequested": false
   }
 ]
